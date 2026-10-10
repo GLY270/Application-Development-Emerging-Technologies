@@ -54,6 +54,9 @@ def delete(record_id):
     conn.close()
     return True
 
+def init_db():
+    pass
+
 class Song:
     def __init__(self, root):
         self.root = root
@@ -73,26 +76,26 @@ class Song:
         self.artist_entry.grid(row=1, column=1, padx=5, pady=8)
 
         ttk.Label(input_frame, text="Age:").grid(row=2, column=0, padx=5, pady=8, sticky="w")
-        self.album_entry = ttk.Entry(input_frame, width=40)
-        self.album_entry.grid(row=2, column=1, padx=5, pady=8)
+        self.age_entry = ttk.Entry(input_frame, width=40)
+        self.age_entry.grid(row=2, column=1, padx=5, pady=8)
 
         ttk.Label(input_frame, text="Genre:").grid(row=3, column=0, padx=5, pady=8, sticky="w")
-        self.year_entry = ttk.Entry(input_frame, width=40)
-        self.year_entry.grid(row=3, column=1, padx=5, pady=8)
+        self.genre_entry = ttk.Entry(input_frame, width=40)
+        self.genre_entry.grid(row=3, column=1, padx=5, pady=8)
 
         btn_frame = ttk.Frame(root)
         btn_frame.pack(padx=10, pady=5, fill="x")
 
-        self.add_btn = ttk.Button(btn_frame, text="Add New", command=self.add_record)
+        self.add_btn = ttk.Button(btn_frame, text="Add New", command=self.add)
         self.add_btn.grid(row=0, column=0, padx=5)
 
-        self.update_btn = ttk.Button(btn_frame, text="Update Selected", command=self.update_record, state="disabled")
+        self.update_btn = ttk.Button(btn_frame, text="Update Selected", command=self.update, state="disabled")
         self.update_btn.grid(row=0, column=1, padx=5)
 
-        self.delete_btn = ttk.Button(btn_frame, text="Delete Selected", command=self.delete_record, state="disabled")
+        self.delete_btn = ttk.Button(btn_frame, text="Delete Selected", command=self.delete, state="disabled")
         self.delete_btn.grid(row=0, column=2, padx=5)
 
-        self.clear_btn = ttk.Button(btn_frame, text="Clear Fields", command=self.clear_fields)
+        self.clear_btn = ttk.Button(btn_frame, text="Clear Fields", command=self.clear)
         self.clear_btn.grid(row=0, column=3, padx=5)
 
         table_frame = ttk.LabelFrame(root, text="Records")
@@ -104,31 +107,39 @@ class Song:
             self.tree.heading(col, text=col)
             self.tree.column(col, width=120)
 
-        self.tree.bind("<<TreeviewSelect>>", self.on_select)
+        self.tree.bind("<<TreeviewSelect>>", self.select)
         self.tree.pack(fill="both", expand=True)
 
         init_db()
         self.refresh_table()
 
+    def refresh_table(self):
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+        for record in read():
+            self.tree.insert("", tk.END, values=record)
+
     def add(self):
         song = self.song_entry.get().strip()
         artist = self.artist_entry.get().strip()
-        age = self.album_entry.get().strip()
-        genre = self.year_entry.get().strip()
+        age_text = self.age_entry.get().strip()
+        genre = self.genre_entry.get().strip()
 
         if not song or not artist:
             messagebox.showwarning("Warning", "Song Title and Artist Name are required!")
             return
 
-        try:
-            year = int(year) if year else None
-        except ValueError:
-            messagebox.showwarning("Warning", "genre must be a word!")
-            return
+        age = None
+        if age_text:
+            try:
+                age = int(age_text)
+            except ValueError:
+                messagebox.showwarning("Warning", "Age must be a number!")
+                return
 
-        create_record(song, artist, age, genre)
+        create(song, artist, age, genre)
         messagebox.showinfo("Success", "Record added!")
-        self.clear_fields()
+        self.clear()
         self.refresh_table()
 
     def select(self, event):
@@ -142,7 +153,7 @@ class Song:
             self.artist_entry.delete(0, tk.END)
             self.artist_entry.insert(0, data[2])
             self.age_entry.delete(0, tk.END)
-            self.age_entry.insert(0, data[3])
+            self.age_entry.insert(0, data[3] if data[3] else "")
             self.genre_entry.delete(0, tk.END)
             self.genre_entry.insert(0, data[4] if data[4] else "")
             self.update_btn.config(state="normal")
@@ -156,30 +167,33 @@ class Song:
             return
         song = self.song_entry.get().strip()
         artist = self.artist_entry.get().strip()
-        age = self.age_entry.get().strip()
+        age_text = self.age_entry.get().strip()
         genre = self.genre_entry.get().strip()
 
         if not song or not artist:
             messagebox.showwarning("Warning", "Song Title and Artist Name are required!")
             return
-        try:
-            year = int(year) if year else None
-        except ValueError:
-            messagebox.showwarning("Warning", "genre must be a word!")
-            return
 
-        update_record(self.selected_id, song, artist, age, genre)
+        age = None
+        if age_text:
+            try:
+                age = int(age_text)
+            except ValueError:
+                messagebox.showwarning("Warning", "Age must be a number!")
+                return
+
+        update(self.selected_id, song, artist, age, genre)
         messagebox.showinfo("Success", "The Record is updated!")
-        self.clear_fields()
+        self.clear()
         self.refresh_table()
 
     def delete(self):
         if not self.selected_id:
             return
         if messagebox.askyesno("Confirm", "Delete this record?"):
-            delete_record(self.selected_id)
+            delete(self.selected_id)
             messagebox.showinfo("Deleted", "Record removed!")
-            self.clear_fields()
+            self.clear()
             self.refresh_table()
 
     def clear(self):
@@ -192,5 +206,7 @@ class Song:
         self.delete_btn.config(state="disabled")
         self.tree.selection_remove(self.tree.selection())
 
+if __name__ == "__main__":
     root = tk.Tk()
+    app = Song(root)
     root.mainloop()
